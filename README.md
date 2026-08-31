@@ -7,39 +7,37 @@ dashboard that issues the same or similar queries again, but more recently also
 data agents that incrementally explore a dataset.
 
 Currently, DuckDB is not very optimized for these repeated workloads. It is your
-job to change that! ⚡
+job to change that by writing a DuckDB extension! ⚡
 
 [^1]: Saxena et al., [*Why TPC Is Not Enough: An Analysis of the Amazon Redshift
 Fleet*](https://www.vldb.org/pvldb/vol17/p3694-saxena.pdf), PVLDB 17(11), 2024.
 
 ## To get started
 
+Press **Use this template → Create a new repository** and set it to **Private**.
+Do not fork: a fork of a public repository cannot be made private. Then invite
+your team members to it as collaborators.
+
+Clone it with its submodules, or there is no `duckdb/` to build against:
+
 ```sh
 git clone --recurse-submodules https://github.com/<you>/<your-repo>.git
 cd <your-repo>
 ```
 
-Then run the setup script, which will allow you to register your team and install the grader's GitHub App:
-```shell
+Register your team and install the grader's GitHub App:
+
+```sh
 python3 ./scripts/assignment-setup.py
 ```
 
-Without `--recurse-submodules` there is no `duckdb/` to build against.
-
-The setup script takes your team name and student numbers, writes them to
-`team.json`, commits it, and opens the grader's GitHub App so you can grant it
-access to this repository. **Nothing you push is graded until that App is
-installed** - the installations are the roster, there is no separate sign-up.
-Re-run it whenever your team changes; previous answers come back as defaults.
+It writes `team.json`, asks when your CI should build, commits both, and opens the
+App so you can grant it access. **Nothing is graded until the App is installed** -
+the installations are the roster, there is no separate sign-up. Re-run it whenever
+your team changes.
 
 Teams are **2 or 3 students**. Your **team name appears on the public
-leaderboard**, so pick one you are happy to be seen with, or one that does not
-identify you. Student numbers are only ever read by the grader.
-
-> [!IMPORTANT]
-> Your repository must stay **private**. A fork of a public template cannot be
-> made private, which is why you create your copy with *Use this template →
-> Private* rather than by forking.
+leaderboard**; your student numbers never do.
 
 ## Building
 
@@ -76,35 +74,48 @@ SET preserve_insertion_order = false;
 LOAD '<your extension>';
 ```
 
-Every query runs **3 times and the best time counts**. Your score is the
-**geometric mean of those per-query best times**, so one lucky run cannot carry
-you and one slow query cannot sink you.
+Every query runs **3 times**. Each run scores the **geometric mean** of its query
+times and the **fastest run counts**, so one run has to be fast at everything: you
+cannot combine your best times for the first half of the set with your best for
+the second.
 
 > [!WARNING]
 > **A fast wrong answer scores nothing.** Every result must match what stock
 > DuckDB returns. Some queries in the stream closely resemble others without
 > being equivalent to them, and the resemblance is deliberate.
 
-Grading runs nightly on `linux_arm64`: your repository is cloned, built in a
-disposable container, checked that the artifact loads and targets the right
-platform, then benchmarked. Both the build and the benchmark are sandboxed with
-**no network**, a read-only filesystem apart from a scratch directory, 6 GB of
-memory and 6 CPUs. The build is killed after 45 minutes, the benchmark after 60.
+Grading runs nightly and **your CI does the building.** The grader downloads the
+binary your Actions run published, loads it into a DuckDB it built itself at the
+pinned commit, and benchmarks that. Your code never compiles on the grading
+machine, and the engine you are measured in is not one you can change.
+
+So **a build is how you submit.** The grader takes the newest commit you have
+built: push further commits without building and it benchmarks the last one you
+did build, and says so. Pushing to `main` builds automatically unless you turned
+that off during setup. A build costs about 20 of the 2000 free Actions minutes a
+private repository gets per month.
+
+The benchmark is sandboxed: no network, read-only filesystem apart from scratch,
+6 GB of memory, 6 CPUs, killed after 60 minutes.
 
 ### What you may and may not change
 
-The grader **repins the `duckdb/` submodule to v1.5.5** before building,
-whatever your submodule points at. Develop against that.
+**DuckDB is pinned to v1.5.5** by `duckdb_version` in
+`.github/workflows/MainDistributionPipeline.yml`, which is what your CI checks the
+`duckdb/` submodule out to. An extension only loads into the version it was built
+against, so a binary built against anything else cannot be benchmarked at all.
 
 | | |
 |---|---|
 | `src/`, `test/` | yours - this is the assignment |
 | `CMakeLists.txt` | fine to edit to add source files; the change is logged |
 | `Makefile`, `extension_config.cmake`, `vcpkg.json` | these feed the **DuckDB** build, not just yours. Changes are flagged for review |
+| `.github/workflows/` | how your binary comes to exist. Changing `duckdb_version` or `uses` is flagged, and breaks your submission |
 | `duckdb/` | do not modify. The assignment is the extension, not the engine |
 
-Renaming the extension away from `waddle` is allowed - the grader reads
-`EXT_NAME` from the `Makefile` - but it buys you nothing, so it is easier not to.
+Renaming the extension away from `waddle` is allowed, but change both `EXT_NAME`
+in the `Makefile` and `extension_name` in the workflow so they agree. It buys you
+nothing.
 
 ## Layout
 
@@ -115,6 +126,7 @@ scripts/assignment-setup.py   team registration + App install
 docs/                    upstream extension-template docs
 duckdb/                  DuckDB submodule, pinned to v1.5.5
 extension-ci-tools/      the build machinery
+.github/workflows/       builds the binary that gets graded
 team.json                written by the setup script - do not hand-edit
 ```
 
@@ -124,6 +136,5 @@ team.json                written by the setup script - do not hand-edit
 <!-- TODO: where to download the public query set -->
 <!-- TODO: link to the full assignment description and the leaderboard -->
 
-If the nightly grader rejects your submission it records why, and you will be
-told. Most failures are `team.json` or a build that does not reproduce in the
-container.
+If the grader rejects your submission, the leaderboard says why. Most failures are
+`team.json`, or no successful build to take a binary from.
