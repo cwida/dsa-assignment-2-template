@@ -59,12 +59,15 @@ debugging, submodules.
 You will be given a stream of SQL queries that are run against the IMDB
 database. Your task is to write a DuckDB extension that optimizes the queries.
 
-There is a public and a private query set. The public set is yours to develop
-against. The private set uses the same patterns with different instances, and is
-what actually ranks you.
+There is a public and a private query set. The public set is in `benchmark/` and
+is yours to develop against. The private set is held back; it uses the same
+patterns with different instances, and is what actually ranks you.
 
-Each set is a directory of `.sql` files, **one statement per file**, run in
-order through the DuckDB CLI and timed with `EXPLAIN ANALYZE` under:
+Each set is a directory of `.sql` files, **one statement per file**, named
+`q0000.sql` upwards. They are run **in filename order**, `q0000` first - the
+order is part of the workload, because a repeated query is only worth
+recognising after the one it repeats. Each is piped through the DuckDB CLI and
+timed with `EXPLAIN ANALYZE` under:
 
 ```sql
 SET threads = 4;
@@ -100,6 +103,7 @@ against, so a binary built against anything else cannot be benchmarked at all.
 | | |
 |---|---|
 | `src/`, `test/` | yours - this is the assignment |
+| `benchmark/` | yours to run against locally. The grader benchmarks its own copy, so editing these changes nothing |
 | `CMakeLists.txt` | fine to edit to add source files; the change is logged |
 | `Makefile`, `extension_config.cmake`, `vcpkg.json` | these feed the **DuckDB** build, not just yours. Changes are flagged for review |
 | `.github/workflows/` | how your binary comes to exist. Changing `duckdb_version` or `uses` is flagged, and breaks your submission |
@@ -113,6 +117,7 @@ is flagged for review, and it buys you nothing.
 
 ```
 src/                     your extension
+benchmark/               the public query set, run in filename order
 test/sql/                SQL tests, run by `make test`
 scripts/assignment-setup.py   team registration + App install
 docs/                    upstream extension-template docs
