@@ -33,8 +33,7 @@ python3 ./scripts/assignment-setup.py
 
 It writes `team.json`, asks when your CI should build, commits both, and opens the
 App so you can grant it access. **Nothing is graded until the App is installed** -
-the installations are the roster, there is no separate sign-up. Re-run it whenever
-your team changes.
+the installations are the roster, there is no separate sign-up.
 
 Teams are **2 or 3 students**. Your **team name appears on the public
 leaderboard**; your student numbers never do.
@@ -46,7 +45,7 @@ git clone https://github.com/Microsoft/vcpkg.git
 ./vcpkg/bootstrap-vcpkg.sh
 export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
 
-make          # -> build/release/duckdb, and the .duckdb_extension that gets graded
+make          # -> build/release/duckdb and build/release/extension/
 make test     # the SQL tests in test/sql
 ```
 
@@ -71,32 +70,25 @@ order through the DuckDB CLI and timed with `EXPLAIN ANALYZE` under:
 SET threads = 4;
 SET memory_limit = '4000MB';
 SET preserve_insertion_order = false;
+SET temp_directory = '<scratch>';
 LOAD '<your extension>';
 ```
 
 Every query runs **3 times**. Each run scores the **geometric mean** of its query
-times and the **fastest run counts**, so one run has to be fast at everything: you
-cannot combine your best times for the first half of the set with your best for
-the second.
+times and the **fastest run counts**.
 
 > [!WARNING]
-> **A fast wrong answer scores nothing.** Every result must match what stock
-> DuckDB returns. Some queries in the stream closely resemble others without
-> being equivalent to them, and the resemblance is deliberate.
+> **A fast wrong answer scores nothing.** Every result must match what vanilla
+> DuckDB returns. 
 
-Grading runs nightly and **your CI does the building.** The grader downloads the
-binary your Actions run published, loads it into a DuckDB it built itself at the
-pinned commit, and benchmarks that. Your code never compiles on the grading
-machine, and the engine you are measured in is not one you can change.
+Grading runs nightly, but **your CI is responsible for building.** The grader
+benchmarks the binary from your last successful build, so the commit it grades is
+the newest one you have *built* - not necessarily your latest commit. The
+leaderboard shows which one it used.
 
-So **a build is how you submit.** The grader takes the newest commit you have
-built: push further commits without building and it benchmarks the last one you
-did build, and says so. Pushing to `main` builds automatically unless you turned
+Pushing to `main` builds automatically unless you turned
 that off during setup. A build costs about 20 of the 2000 free Actions minutes a
 private repository gets per month.
-
-The benchmark is sandboxed: no network, read-only filesystem apart from scratch,
-6 GB of memory, 6 CPUs, killed after 60 minutes.
 
 ### What you may and may not change
 
@@ -111,11 +103,11 @@ against, so a binary built against anything else cannot be benchmarked at all.
 | `CMakeLists.txt` | fine to edit to add source files; the change is logged |
 | `Makefile`, `extension_config.cmake`, `vcpkg.json` | these feed the **DuckDB** build, not just yours. Changes are flagged for review |
 | `.github/workflows/` | how your binary comes to exist. Changing `duckdb_version` or `uses` is flagged, and breaks your submission |
-| `duckdb/` | do not modify. The assignment is the extension, not the engine |
+| `duckdb/` | changing it gains you nothing: your extension is benchmarked inside a DuckDB the grader built at the pinned commit, never one from your tree |
 
-Renaming the extension away from `waddle` is allowed, but change both `EXT_NAME`
-in the `Makefile` and `extension_name` in the workflow so they agree. It buys you
-nothing.
+Renaming the extension away from `waddle` is allowed - change both `EXT_NAME` in
+the `Makefile` and `extension_name` in the workflow - but editing the `Makefile`
+is flagged for review, and it buys you nothing.
 
 ## Layout
 
@@ -129,12 +121,3 @@ extension-ci-tools/      the build machinery
 .github/workflows/       builds the binary that gets graded
 team.json                written by the setup script - do not hand-edit
 ```
-
-## Getting help
-
-<!-- TODO: schedule, deadlines, and the weekly subtasks -->
-<!-- TODO: where to download the public query set -->
-<!-- TODO: link to the full assignment description and the leaderboard -->
-
-If the grader rejects your submission, the leaderboard says why. Most failures are
-`team.json`, or no successful build to take a binary from.
