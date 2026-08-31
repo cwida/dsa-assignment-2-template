@@ -34,7 +34,7 @@ SELECT CASE
            ELSE '150+'
        END AS credit_bucket,
        count(*) AS n_actors,
-       round(avg(n_genres), 2) AS avg_genres,
+       round(round(avg(n_genres), 12), 2) AS avg_genres,
        max(n_genres) AS max_genres
 FROM joined
 GROUP BY 1
