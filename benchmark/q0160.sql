@@ -8,6 +8,7 @@ WHERE mi.info_type_id = 5
   AND t.production_year IS NOT NULL
 GROUP BY 1,
          2 QUALIFY row_number() OVER (PARTITION BY decade
-                                      ORDER BY n DESC) <= 3
+                                      ORDER BY n DESC, rating) <= 3
 ORDER BY decade,
-         n DESC;
+         n DESC,
+         rating;

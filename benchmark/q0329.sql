@@ -13,7 +13,7 @@ WITH depmovies AS
         FROM depmovies)),
      coprod AS
   (SELECT movie_id,
-          list(DISTINCT country_code) AS countries
+          list(DISTINCT country_code ORDER BY country_code) AS countries
    FROM prod
    GROUP BY movie_id
    HAVING bool_or(country_code = '[fr]')

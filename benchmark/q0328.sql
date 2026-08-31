@@ -14,7 +14,7 @@ WITH depmovies AS
 SELECT movie_id,
        count(DISTINCT country_code) FILTER (
                                             WHERE country_code IS NOT NULL) AS n_countries,
-       list(DISTINCT country_code) AS countries
+       list(DISTINCT country_code ORDER BY country_code) AS countries
 FROM prod
 GROUP BY movie_id
 HAVING bool_or(country_code = '[fr]')
