@@ -87,7 +87,7 @@ the newest one you have *built* - not necessarily your latest commit. The
 leaderboard shows which one it used.
 
 Pushing to `main` builds automatically unless you turned
-that off during setup. A build costs about 20 of the 2000 free Actions minutes a
+that off during setup. A build costs about 33 of the 2000 free Actions minutes a
 private repository gets per month.
 
 ### What you may and may not change

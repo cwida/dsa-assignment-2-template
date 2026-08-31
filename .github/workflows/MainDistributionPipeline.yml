@@ -1,10 +1,7 @@
 #
-# Builds the extension binary the grader benchmarks. Only Linux is built: those
-# are the platforms the grading machine can be, and every other target would
-# spend your Actions minutes on a binary nobody evaluates.
-#
-# ./scripts/assignment-setup.py narrows this to the one platform the course
-# grades on, which saves the ~14 minutes the second one costs every build.
+# Builds the extension binary the grader benchmarks. Both Linux architectures are
+# built because either can be the grading machine; every other target would spend
+# your Actions minutes on a binary nobody ever evaluates.
 #
 # Pushing to another branch builds nothing. "Run workflow" can build any branch,
 # but only the default branch is ever graded.

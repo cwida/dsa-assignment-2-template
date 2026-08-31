@@ -25,13 +25,9 @@ MAX_STUDENTS = 3
 TEMPLATE_REMOTES = {"cwida/dsa-assignment-2-template"}
 
 WORKFLOW = Path(".github/workflows/MainDistributionPipeline.yml")
-RELEASE_PLATFORM = "linux_amd64"
-BUILD_MINUTES = 20
+BUILD_MINUTES = 33
 FREE_MINUTES = 2000
 PUSH_TRIGGER = "  push:\n    branches: [ main ]\n"
-PLATFORMS = ("linux_amd64", "linux_arm64", "linux_amd64_musl", "linux_arm64_musl",
-             "osx_amd64", "osx_arm64", "windows_amd64", "windows_arm64",
-             "windows_amd64_mingw", "wasm_mvp", "wasm_eh", "wasm_threads")
 
 API = "https://api.github.com"
 TIMEOUT = 10.0
@@ -219,26 +215,6 @@ def write(root: Path, previous: dict, slug: str, team: str, numbers: list[str]) 
     return path
 
 
-def trim_platforms(root: Path) -> Path | None:
-    """Build only the platform the course grades on.
-
-    Every other target spends your Actions minutes on a binary nobody evaluates.
-    This is only a saving: if it does not apply, the extra binaries get built and
-    the grader ignores them.
-    """
-    path = root / WORKFLOW
-    if not path.exists():
-        return None
-    keep = f"'{';'.join(p for p in PLATFORMS if p != RELEASE_PLATFORM)}'"
-    text = path.read_text()
-    edited = re.sub(r"(?m)^(\s*exclude_archs:\s*).*$", lambda m: m.group(1) + keep,
-                    text)
-    if edited == text:
-        return None
-    path.write_text(edited)
-    return path
-
-
 def publish(paths: list[Path], team: str) -> None:
     names = [str(p) for p in paths]
     git("add", "--", *names)
@@ -332,7 +308,7 @@ def main() -> None:
 
     section("Committing")
     changed = [write(root, registered, slug, team, numbers)]
-    for edited in (trim_platforms(root), set_autobuild(root, auto)):
+    for edited in (set_autobuild(root, auto),):
         if edited and edited not in changed:
             changed.append(edited)
     print(f"  {', '.join(p.name for p in changed)}")
