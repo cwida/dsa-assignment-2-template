@@ -1,0 +1,354 @@
+"""Register this repository and your team with the assignment grader.
+
+    python3 ./scripts/assignment-setup.py
+
+Re-run it any time: the answers already in team.json come back as the defaults.
+"""
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+import webbrowser
+from datetime import datetime, timezone
+from pathlib import Path
+
+APP_URL = "https://github.com/apps/dsa-evaluator-assignment-2"
+INSTALL_URL = f"{APP_URL}/installations/new"
+TEAM_FILE = "team.json"
+SCHEMA = 1
+MIN_STUDENTS = 2
+MAX_STUDENTS = 3
+TEMPLATE_REMOTES = {"cwida/dsa-assignment-2-template"}
+
+WORKFLOW = Path(".github/workflows/MainDistributionPipeline.yml")
+RELEASE_PLATFORM = "linux_amd64"
+BUILD_MINUTES = 20
+FREE_MINUTES = 2000
+PUSH_TRIGGER = "  push:\n    branches: [ main ]\n"
+PLATFORMS = ("linux_amd64", "linux_arm64", "linux_amd64_musl", "linux_arm64_musl",
+             "osx_amd64", "osx_arm64", "windows_amd64", "windows_arm64",
+             "windows_amd64_mingw", "wasm_mvp", "wasm_eh", "wasm_threads")
+
+API = "https://api.github.com"
+TIMEOUT = 10.0
+SLUG = re.compile(r"^(?:https://|git@|ssh://git@)github\.com[:/]([^/]+?)/(.+?)(?:\.git)?/?$")
+
+
+def die(msg: str, *hints: str) -> None:
+    print(f"\nerror: {msg}", file=sys.stderr)
+    for hint in hints:
+        print(f"       {hint}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def section(title: str) -> None:
+    print(f"\n{title}\n{'-' * len(title)}")
+
+
+def git(*args: str, check: bool = True) -> str:
+    p = subprocess.run(("git", *args), capture_output=True, text=True)
+    if check and p.returncode:
+        die(f"git {' '.join(args)} failed", p.stderr.strip() or "no output")
+    return p.stdout.strip()
+
+
+def ask(question: str, default: str = "") -> str:
+    try:
+        return input(f"{question}{f' [{default}]' if default else ''}: ").strip() or default
+    except EOFError:
+        raise SystemExit("\naborted")
+
+
+def confirm(question: str, default: bool = True) -> bool:
+    try:
+        answer = input(f"{question} [{'Y/n' if default else 'y/N'}] ").strip().lower()
+    except EOFError:
+        raise SystemExit("\naborted")
+    return default if not answer else answer.startswith("y")
+
+
+def origin_slug() -> str:
+    url = git("remote", "get-url", "origin", check=False)
+    if not url:
+        die("this repository has no 'origin' remote",
+            'create your own repo with "Use this template" -> Private, then:',
+            "git remote add origin git@github.com:<you>/<repo>.git")
+    match = SLUG.match(url)
+    if not match:
+        die(f"origin is not a GitHub remote: {url}")
+    slug = f"{match.group(1)}/{match.group(2)}"
+    if slug in TEMPLATE_REMOTES:
+        die(f"origin still points at the template ({slug})",
+            'use "Use this template" -> Private to create your own repo first')
+    return slug
+
+
+def probe(slug: str) -> tuple[str, dict]:
+    """('public', data) | ('hidden', {}) | ('unknown', {}). Unauthenticated, so
+    a 404 cannot tell a private repo from one that does not exist yet."""
+    request = urllib.request.Request(
+        f"{API}/repos/{slug}",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "dsa-setup"})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            return "public", json.load(response)
+    except urllib.error.HTTPError as e:
+        return ("hidden", {}) if e.code == 404 else ("unknown", {})
+    except OSError:
+        return "unknown", {}
+
+
+def make_private(slug: str) -> bool:
+    if not shutil.which("gh") or not confirm("  Make it private now with the gh CLI?"):
+        return False
+    edited = subprocess.run(
+        ("gh", "repo", "edit", slug, "--visibility", "private",
+         "--accept-visibility-change-consequences"), capture_output=True, text=True)
+    if edited.returncode:
+        print(f"  ! gh failed: {(edited.stderr.strip().splitlines() or [''])[-1]}")
+        return False
+    return probe(slug)[0] == "hidden"
+
+
+def ensure_private(slug: str) -> None:
+    """A public solution is a plagiarism vector, so this is a hard requirement.
+    Only a definite 200 is a failure; 404 and an unreachable API both pass."""
+    state, data = probe(slug)
+    if state == "hidden":
+        print("  private (or not pushed yet)")
+        return
+    if state == "unknown":
+        print(f"  ! GitHub unreachable; check yourself that {slug} is Private")
+        return
+    print("  ! this repository is PUBLIC - anyone can read your solution")
+    if data.get("fork"):
+        die("a fork cannot be made private",
+            'delete this repo, then use "Use this template" -> Private')
+    if make_private(slug):
+        print("  now private")
+        return
+    die("this repository must be Private before it can be graded",
+        f"{data.get('html_url', f'https://github.com/{slug}')}/settings",
+        "-> General -> Danger Zone -> Change visibility -> Make private")
+
+
+def load(root: Path) -> dict:
+    try:
+        previous = json.loads((root / TEAM_FILE).read_text())
+    except (OSError, ValueError):
+        return {}
+    return previous if isinstance(previous, dict) else {}
+
+
+def choose(question: str, *options: str, default: str) -> str:
+    while True:
+        answer = ask(f"{question} ({'/'.join(options)})", default).lower()
+        for option in options:
+            if option.startswith(answer):
+                return option
+        print(f"  ! choose one of: {', '.join(options)}")
+
+
+def team_name(default: str, registered: str, notice: bool) -> str:
+    if notice:
+        print("  Your team name is shown publicly on the leaderboard. If you would")
+        print("  rather not be identifiable, pick one that does not give you away.")
+        print("  Please do not change it after your first submission.\n")
+    while True:
+        name = ask("Team name", default)
+        if not name:
+            continue
+        if not registered or name == registered:
+            return name
+        print(f"  ! this renames the team from '{registered}', which the leaderboard")
+        print("    has been showing since your first submission")
+        if confirm("  Rename anyway?", default=False):
+            return name
+
+
+def team_size(default: int) -> int:
+    while True:
+        answer = ask(f"Team size ({MIN_STUDENTS} or {MAX_STUDENTS})",
+                     str(default) if default else "")
+        if not answer.isdigit():
+            print(f"  ! enter {MIN_STUDENTS} or {MAX_STUDENTS}")
+            continue
+        size = int(answer)
+        if size < MIN_STUDENTS:
+            print(f"  ! a team of {size} is not allowed, this is a group assignment")
+        elif size > MAX_STUDENTS:
+            print(f"  ! at most {MAX_STUDENTS} students per team")
+        elif size < MAX_STUDENTS and not confirm(
+                f"  ! teams of {MAX_STUDENTS} are preferred. Continue with {size}?"):
+            continue
+        else:
+            return size
+
+
+def student_ids(size: int, earlier: list[str]) -> list[str]:
+    numbers: list[str] = []
+    for i in range(size):
+        while True:
+            number = ask(f"Student number {i + 1}/{size}",
+                         earlier[i] if i < len(earlier) else "")
+            if not number:
+                print("  ! required")
+            elif number in numbers:
+                print(f"  ! {number} is already in this team")
+            else:
+                numbers.append(number)
+                break
+    return numbers
+
+
+def write(root: Path, previous: dict, slug: str, team: str, numbers: list[str]) -> Path:
+    """Keep the original timestamp when nothing else changed, so a re-run is a
+    no-op rather than a fresh commit."""
+    payload = {"schema": SCHEMA, "team": team, "students": numbers, "repository": slug,
+               "registered_at": datetime.now(timezone.utc)
+                                        .isoformat(timespec="seconds")
+                                        .replace("+00:00", "Z")}
+    if all(previous.get(k) == payload[k] for k in payload if k != "registered_at"):
+        payload["registered_at"] = previous.get("registered_at", payload["registered_at"])
+    path = root / TEAM_FILE
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+    return path
+
+
+def trim_platforms(root: Path) -> Path | None:
+    """Build only the platform the course grades on.
+
+    Every other target spends your Actions minutes on a binary nobody evaluates.
+    This is only a saving: if it does not apply, the extra binaries get built and
+    the grader ignores them.
+    """
+    path = root / WORKFLOW
+    if not path.exists():
+        return None
+    keep = f"'{';'.join(p for p in PLATFORMS if p != RELEASE_PLATFORM)}'"
+    text = path.read_text()
+    edited = re.sub(r"(?m)^(\s*exclude_archs:\s*).*$", lambda m: m.group(1) + keep,
+                    text)
+    if edited == text:
+        return None
+    path.write_text(edited)
+    return path
+
+
+def publish(paths: list[Path], team: str) -> None:
+    names = [str(p) for p in paths]
+    git("add", "--", *names)
+    if not subprocess.run(("git", "diff", "--cached", "--quiet", "--", *names)).returncode:
+        print("  already committed and unchanged")
+        return
+    git("commit", "-m", f"Register team {team}", "--", *names)
+    pushed = subprocess.run(("git", "push", "-u", "origin", "HEAD"),
+                            capture_output=True, text=True)
+    if pushed.returncode:
+        print(f"  ! push failed: {(pushed.stderr.strip().splitlines() or ['?'])[-1]}")
+        print("    committed locally; run 'git push -u origin HEAD' yourself")
+    else:
+        print("  pushed")
+
+
+def build_policy(slug: str) -> bool:
+    """A build is the submission, so this asks when one should happen."""
+    print("  The grader benchmarks the binary your CI builds, never your source,")
+    print("  and it grades the newest commit you have built.")
+    print(f"  A build costs ~{BUILD_MINUTES} of the {FREE_MINUTES} free Actions "
+          f"minutes a private repo")
+    print(f"  gets monthly. Other branches never build on their own. By hand:")
+    print(f"    https://github.com/{slug}/actions -> Run workflow")
+    return confirm("\n  Also build on every push to main?", default=True)
+
+
+def set_autobuild(root: Path, on: bool) -> Path | None:
+    """Add or remove the push trigger. Left alone if the file was hand-edited."""
+    path = root / WORKFLOW
+    if not path.exists():
+        return None
+    text = path.read_text()
+    if (PUSH_TRIGGER in text) == on:
+        return None
+    edited = (text.replace("  workflow_dispatch:\n",
+                           PUSH_TRIGGER + "  workflow_dispatch:\n", 1) if on
+              else text.replace(PUSH_TRIGGER, "", 1))
+    if edited == text:
+        return None
+    path.write_text(edited)
+    return path
+
+
+def install(slug: str) -> None:
+    print(f"  Grant the App access to exactly one repository: {slug}")
+    print(f"  {INSTALL_URL}")
+    print("  (opened in your browser)" if webbrowser.open(INSTALL_URL)
+          else "  (open that URL yourself)")
+    if not confirm(f"Did you install the App and select {slug}?", default=False):
+        print("  Nothing is submitted until you do. Re-run this script any time.")
+
+
+def main() -> None:
+    root = Path(git("rev-parse", "--show-toplevel"))
+    slug = origin_slug()
+    registered = load(root)
+
+    section("Repository")
+    print(f"  {slug}")
+    ensure_private(slug)
+    if registered.get("repository") not in (None, slug):
+        print(f"  ! {TEAM_FILE} was registered for {registered['repository']}")
+
+    section("Team")
+    if registered:
+        print(f"  {TEAM_FILE} found, registered {registered.get('registered_at', '?')}")
+        print("  press Enter to keep a value\n")
+
+    draft, notice = dict(registered), True
+    while True:
+        team = team_name(draft.get("team", ""), registered.get("team", ""), notice)
+        numbers = student_ids(team_size(len(draft.get("students", []))),
+                              draft.get("students", []))
+
+        section("Review")
+        print(f"  team        {team}")
+        print(f"  students    {', '.join(numbers)}")
+        print(f"  repository  {slug}")
+        action = choose(f"\nCommit and push {TEAM_FILE}?",
+                        "push", "restart", "cancel", default="push")
+        if action == "cancel":
+            raise SystemExit("cancelled, nothing written")
+        if action == "push":
+            break
+        draft, notice = {**draft, "team": team, "students": numbers}, False
+        section("Team")
+
+    section("Being graded")
+    auto = build_policy(slug)
+
+    section("Committing")
+    changed = [write(root, registered, slug, team, numbers)]
+    for edited in (trim_platforms(root), set_autobuild(root, auto)):
+        if edited and edited not in changed:
+            changed.append(edited)
+    print(f"  {', '.join(p.name for p in changed)}")
+    publish(changed, team)
+
+    section("Installing the grader App")
+    install(slug)
+
+    section("Done")
+    print(f"  {team}: {', '.join(numbers)} -> {slug}")
+    print(f"  builds {'on every push to main' if auto else 'only when you run them'}"
+          f", graded nightly")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        raise SystemExit("\naborted")
