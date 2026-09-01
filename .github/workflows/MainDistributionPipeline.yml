@@ -3,13 +3,12 @@
 # built because either can be the grading machine; every other target would spend
 # your Actions minutes on a binary nobody ever evaluates.
 #
-# Pushing to another branch builds nothing. "Run workflow" can build any branch,
-# but only the default branch is ever graded.
+# No push ever builds on its own: "Run workflow" starts a build, and it can build
+# any branch, but only the default branch is ever graded. Building on every push
+# to main is opt-in, via scripts/assignment-setup.py.
 #
 name: Main Extension Distribution Pipeline
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 concurrency:

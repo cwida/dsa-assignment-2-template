@@ -85,7 +85,9 @@ INSTALL quack;
 LOAD quack;
 ```
 
-## Setting up CLion
+## Setting up CLion (Optional)
+
+If you have GitHub education, you should get Clion for free.
 
 ### Opening project
 Configuring CLion with this extension requires a little work. Firstly, make sure that the DuckDB submodule is available.

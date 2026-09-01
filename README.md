@@ -14,7 +14,7 @@ Fleet*](https://www.vldb.org/pvldb/vol17/p3694-saxena.pdf), PVLDB 17(11), 2024.
 
 ## To get started
 
-Press **Use this template → Create a new repository** and set it to **Private**.
+Press **Use this template → Create a new repository** (top-right of the GitHub page, green button) and set it to **Private**.
 Do not fork: a fork of a public repository cannot be made private. Then invite
 your team members to it as collaborators.
 
@@ -25,7 +25,8 @@ git clone --recurse-submodules https://github.com/<you>/<your-repo>.git
 cd <your-repo>
 ```
 
-Register your team and install the grader's GitHub App:
+Register your team and install the grader's GitHub App: 
+It will give us read access to each repository it is installed for, so only install it for the repo you want to be graded for. 
 
 ```sh
 python3 ./scripts/assignment-setup.py
@@ -38,6 +39,38 @@ the installations are the roster, there is no separate sign-up.
 Teams are **2 or 3 students**. Your **team name appears on the public
 leaderboard**; your student numbers never do.
 
+### The IMDB database
+
+The queries in `benchmark/` run against the IMDB (JOB) dataset, which is not in
+this repository. Download it once:
+
+```sh
+python3 ./scripts/download-imdb.py
+```
+
+It fetches the ~1.3 GB dump, loads it into `data/imdb.duckdb` and checks the row
+counts. Expect ten minutes or so, 2.5 GB left on disk and about 9 GB needed while
+it runs. `data/` is git-ignored - never commit the database.
+
+The load needs a DuckDB CLI at the pinned version. It uses `build/release/duckdb`
+or one on your `PATH` if either is v1.5.5, and otherwise downloads the official
+binary and throws it away afterwards - so you can do this before your first build.
+Re-running the script is a no-op; pass `--force` to rebuild, or `--duckdb PATH` to
+choose the CLI yourself.
+
+Then a query is just:
+
+```sh
+duckdb data/imdb.duckdb < benchmark/q0000.sql
+```
+
+`scripts/imdb_schema.sql` is the schema those queries are written against, and it
+is the same schema the grader loads its copy with - primary keys included, so the
+ART index on every `id` is there on both sides. **Build your copy with the script
+and leave it alone.** Adding an index, or loading the dump some other way, gives
+you plans the grader will never produce, and you would be optimizing against a
+database that is not the one you are scored on.
+
 ## Building
 
 ```sh
@@ -49,12 +82,10 @@ make          # -> build/release/duckdb and build/release/extension/
 make test     # the SQL tests in test/sql
 ```
 
-`src/waddle_extension.cpp` ships a placeholder scalar function so the template
-builds green. Delete it; it is scaffolding, not a starting design.
 `docs/README.md` is the upstream extension-template documentation - CLion setup,
 debugging, submodules.
 
-# Benchmark
+# Task 
 
 You will be given a stream of SQL queries that are run against the IMDB
 database. Your task is to write a DuckDB extension that optimizes the queries.
@@ -65,15 +96,13 @@ patterns with different instances, and is what actually ranks you.
 
 Each set is a directory of `.sql` files, **one statement per file**, named
 `q0000.sql` upwards. They are run **in filename order**, `q0000` first - the
-order is part of the workload, because a repeated query is only worth
-recognising after the one it repeats. Each is piped through the DuckDB CLI and
+order is part of the workload. Each is piped through the DuckDB CLI and
 timed with `EXPLAIN ANALYZE` under:
 
 ```sql
 SET threads = 4;
 SET memory_limit = '4000MB';
 SET preserve_insertion_order = false;
-SET temp_directory = '<scratch>';
 LOAD '<your extension>';
 ```
 
@@ -89,9 +118,10 @@ benchmarks the binary from your last successful build, so the commit it grades i
 the newest one you have *built* - not necessarily your latest commit. The
 leaderboard shows which one it used.
 
-Pushing to `main` builds automatically unless you turned
-that off during setup. A build costs about 33 of the 2000 free Actions minutes a
-private repository gets per month.
+No push builds anything by default: start a build yourself from the Actions tab
+(*Run workflow*), or turn on building every push to `main` during setup. A build
+costs about 33 of the 2000 free Actions minutes a private repository gets per
+month.
 
 ### What you may and may not change
 
@@ -118,8 +148,11 @@ is flagged for review, and it buys you nothing.
 ```
 src/                     your extension
 benchmark/               the public query set, run in filename order
+data/imdb.duckdb         the dataset, git-ignored, written by the script below
 test/sql/                SQL tests, run by `make test`
 scripts/assignment-setup.py   team registration + App install
+scripts/download-imdb.py      builds data/imdb.duckdb from the CWI dump
+scripts/imdb_schema.sql       the IMDB schema the queries are written against
 docs/                    upstream extension-template docs
 duckdb/                  DuckDB submodule, pinned to v1.5.5
 extension-ci-tools/      the build machinery

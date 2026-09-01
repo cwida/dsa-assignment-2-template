@@ -27,6 +27,8 @@ MAX_STUDENTS = 3
 TEMPLATE_REMOTES = {"cwida/dsa-assignment-2-template"}
 
 WORKFLOW = Path(".github/workflows/MainDistributionPipeline.yml")
+DOWNLOAD = Path("scripts/download-imdb.py")
+DB = Path("data/imdb.duckdb")
 BUILD_MINUTES = 33
 FREE_MINUTES = 2000
 PUSH_TRIGGER = "  push:\n    branches: [ main ]\n"
@@ -239,9 +241,10 @@ def build_policy(slug: str) -> bool:
     print("  and it grades the newest commit you have built.")
     print(f"  A build costs ~{BUILD_MINUTES} of the {FREE_MINUTES} free Actions "
           f"minutes a private repo")
-    print(f"  gets monthly. Other branches never build on their own. By hand:")
+    print(f"  gets monthly. Nothing builds on its own unless you say so here.")
+    print(f"  By hand, on any branch:")
     print(f"    https://github.com/{slug}/actions -> Run workflow")
-    return confirm("\n  Also build on every push to main?", default=True)
+    return confirm("\n  Also build on every push to main?", default=False)
 
 
 def set_autobuild(root: Path, on: bool) -> Path | None:
@@ -268,6 +271,25 @@ def install(slug: str) -> None:
           else "  (open that URL yourself)")
     if not confirm(f"Did you install the App and select {slug}?", default=False):
         print("  Nothing is submitted until you do. Re-run this script any time.")
+
+
+def offer_dataset(root: Path) -> None:
+    """The benchmark is useless without the data, but it is a long download, so
+    it is a question here rather than something registration does to you."""
+    script = root / DOWNLOAD
+    if not script.exists():
+        return
+    if (root / DB).exists():
+        print(f"  {DB.as_posix()} is already there")
+        return
+    print("  The queries in benchmark/ run against the IMDB dataset, which is not")
+    print("  in the repository. It is a ~1.3 GB download that becomes a 2.5 GB")
+    print(f"  {DB.as_posix()}.")
+    print(f"  Any time later: python3 ./{DOWNLOAD.as_posix()}")
+    if not confirm("\n  Download it now?"):
+        return
+    if subprocess.run([sys.executable, str(script)], cwd=str(root)).returncode:
+        print(f"\n  ! that did not finish; run ./{DOWNLOAD.as_posix()} again yourself")
 
 
 def main() -> None:
@@ -318,6 +340,9 @@ def main() -> None:
 
     section("Installing the grader App")
     install(slug)
+
+    section("The IMDB database")
+    offer_dataset(root)
 
     section("Done")
     print(f"  {team}: {', '.join(numbers)} -> {slug}")
