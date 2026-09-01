@@ -5,6 +5,8 @@
 Re-run it any time: the answers already in team.json come back as the defaults.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import shutil
