@@ -69,8 +69,8 @@ benchmarks the binary from your last successful CI build, so the commit it grade
 the newest one you have *built* - not necessarily your latest commit. The
 leaderboard shows which one it used.
 
-No push builds anything by default: start a build yourself from the Actions tab
-(*Run workflow*), or turn on building every push to `main` during setup. A build
+No push triggers a build by default: start a build yourself from the Actions tab on the GitHub page
+(*Run workflow*), or turn on building every push to `main` when running `assignment-setup.py`. A build
 costs about 33 of the 2000 free Actions minutes a private repository gets per
 month, so if you want to build every push, make sure your team has enough minutes.
 
