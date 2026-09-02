@@ -25,7 +25,7 @@ git clone --recurse-submodules https://github.com/<you>/<your-repo>.git
 cd <your-repo>
 ```
 
-Register your team and install the grader's GitHub App: 
+*Register your team and install the grader's GitHub App:* 
 It will give us read access to each repository it is installed for, so only install it for the repo you want to be graded for. 
 
 ```sh
