@@ -18,7 +18,7 @@ Press **Use this template → Create a new repository** (top-right of the GitHub
 Do not fork: a fork of a public repository cannot be made private. Then invite
 your team members to it as collaborators.
 
-Clone it with its submodules, or there is no `duckdb/` to build against:
+Clone your repo with its submodules, otherwise it will be missing duckdb and can't test your extension.
 
 ```sh
 git clone --recurse-submodules https://github.com/<you>/<your-repo>.git
@@ -34,10 +34,47 @@ python3 ./scripts/assignment-setup.py
 
 The script writes `team.json`, asks when your CI should build, commits both, and
 opens the grader's GitHub App to install. The App reads every repository it is
-installed for, so install it for this one only. **Nothing is graded until it is
-installed** - the installations are the roster, there is no separate sign-up.
+installed for, so install it only for your assignment repository. 
+**We can't evaluate your submission without the App** - there is no separate sign-up.
 
-### The IMDB database
+# Task 
+
+You will be given a stream of SQL queries that are run against the IMDB
+database. Your task is to write a DuckDB extension that optimizes the queries.
+
+There is a public and a private query set. The public set is in `benchmark/` of this template and
+is yours to develop against. The private set is ... private, and will be used for the leaderboard; it uses the similar query
+patterns, and is what actually ranks you.
+
+Each set is a directory of `.sql` files, **one statement per file**, named
+`q0000.sql` upwards. They are run **in filename order**, `q0000` first - the
+order is part of the workload. 
+
+When running the benchmark for the leaderboard, we will use the following settings:
+```sql
+SET threads = 6;
+SET memory_limit = '8000MB';
+SET preserve_insertion_order = false;
+```
+
+The set runs **twice**. A run scores the **geometric mean** of its query times,
+and the **faster run counts**.
+
+> [!WARNING]
+> **A fast wrong answer scores nothing.** Every result must match what vanilla
+> DuckDB returns.
+
+Grading runs nightly, but **your CI is responsible for building.** The grader
+benchmarks the binary from your last successful CI build, so the commit it grades is
+the newest one you have *built* - not necessarily your latest commit. The
+leaderboard shows which one it used.
+
+No push builds anything by default: start a build yourself from the Actions tab
+(*Run workflow*), or turn on building every push to `main` during setup. A build
+costs about 33 of the 2000 free Actions minutes a private repository gets per
+month, so if you want to build every push, make sure your team has enough minutes.
+
+### Download Datasets
 
 The queries in `benchmark/` run against the IMDB (JOB) dataset, which is not in
 this repository. Download it once:
@@ -53,10 +90,6 @@ is the same schema that will be used for the leaderboard.
 ### Building
 
 ```sh
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
-export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
-
 make          # -> build/release/duckdb and build/release/extension/
 make test     # the SQL tests in test/sql
 ```
@@ -64,54 +97,19 @@ make test     # the SQL tests in test/sql
 `docs/README.md` is the upstream extension-template documentation - CLion setup,
 debugging, submodules.
 
-# Task 
-
-You will be given a stream of SQL queries that are run against the IMDB
-database. Your task is to write a DuckDB extension that optimizes the queries.
-
-There is a public and a private query set. The public set is in `benchmark/` and
-is yours to develop against. The private set is held back; it uses the same
-patterns with different instances, and is what actually ranks you.
-
-Each set is a directory of `.sql` files, **one statement per file**, named
-`q0000.sql` upwards. They are run **in filename order**, `q0000` first - the
-order is part of the workload. Each is piped through the DuckDB CLI and
-timed with `EXPLAIN ANALYZE` under:
-
-```sql
-SET threads = 6;
-SET memory_limit = '8000MB';
-SET preserve_insertion_order = false;
-LOAD '<your extension>';
-```
-
-The set runs **twice**. A run scores the **geometric mean** of its query times,
-and the **faster run counts**.
-
-> [!WARNING]
-> **A fast wrong answer scores nothing.** Every result must match what vanilla
-> DuckDB returns.
-
-Grading runs nightly, but **your CI is responsible for building.** The grader
-benchmarks the binary from your last successful build, so the commit it grades is
-the newest one you have *built* - not necessarily your latest commit. The
-leaderboard shows which one it used.
-
-No push builds anything by default: start a build yourself from the Actions tab
-(*Run workflow*), or turn on building every push to `main` during setup. A build
-costs about 33 of the 2000 free Actions minutes a private repository gets per
-month.
 
 ### What you may and may not change
 
-**DuckDB is pinned to v1.5.5** by `duckdb_version` in
+**We will use DuckDB v1.5.5 to benchmark your extension, so you must build against that version.**
+
+DuckDB is pinned to v1.5.5 by `duckdb_version` in
 `.github/workflows/MainDistributionPipeline.yml`, which is what your CI checks the
 `duckdb/` submodule out to. An extension only loads into the version it was built
 against, so a binary built against anything else cannot be benchmarked at all.
 
 Please don't rename your extension, as this will (potentially) break the grader.
 
-| | |
+| File or directory  | What you can do |
 |---|---|
 | `src/`, `test/` | yours - this is the assignment |
 | `benchmark/` | yours to run against locally. The grader benchmarks its own copy, so editing these changes nothing |
