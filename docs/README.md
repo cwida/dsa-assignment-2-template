@@ -10,10 +10,9 @@ Note that `--recurse-submodules` will ensure DuckDB is pulled which is required 
 
 ## Building
 ### Managing dependencies
-> [!IMPORTANT]  
-> The example extension uses VCPKG to build with a dependency for instructive purposes, so when skipping this step the build may not work without removing the dependency.
-
-DuckDB extensions uses VCPKG for dependency management. Enabling VCPKG is very simple: follow the [installation instructions](https://vcpkg.io/en/getting-started) or just run the following:
+This extension has no external dependencies, so no VCPKG setup is needed to build it. If you add one to
+`vcpkg.json`, follow the [VCPKG installation instructions](https://vcpkg.io/en/getting-started) or just run the
+following:
 ```shell
 cd <your-working-dir-not-the-plugin-repo>
 git clone https://github.com/Microsoft/vcpkg.git
@@ -21,9 +20,6 @@ cd vcpkg && git checkout ce613c41372b23b1f51333815feb3edd87ef8a8b
 sh ./scripts/bootstrap.sh -disableMetrics
 export VCPKG_TOOLCHAIN_PATH=`pwd`/scripts/buildsystems/vcpkg.cmake
 ```
-
-> [!NOTE]
-> VCPKG is only required for extensions that want to rely on it for dependency management. If you want to develop an extension without dependencies, or want to do your own dependency management, just skip this step. 
 
 ### Updating Submodules
 DuckDB extensions use two submodules that are included in your forked extension repo when you use the `--recurse-submodules` flag. These modules are:

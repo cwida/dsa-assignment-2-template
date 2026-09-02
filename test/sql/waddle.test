@@ -16,8 +16,3 @@ query I
 SELECT waddle('Sam');
 ----
 ...........🦆 Sam
-
-query I
-SELECT waddle_openssl_version('Michael') ILIKE 'Waddle Michael, my linked OpenSSL version is OpenSSL%';
-----
-true
