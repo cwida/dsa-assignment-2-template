@@ -1,11 +1,37 @@
-# Testing this extension
-This directory contains all the tests for this extension. The `sql` directory holds tests that are written as [SQLLogicTests](https://duckdb.org/dev/sqllogictest/intro.html). DuckDB aims to have most its tests in this format as SQL statements, so for the quack extension, this should probably be the goal too.
+# Testing
 
-The root makefile contains targets to build and run all of these tests. To run the SQLLogicTests:
 ```bash
-make test
+make test        # release build
+make test_debug  # debug build
 ```
-or 
-```bash
-make test_debug
+
+## `sql/benchmark.test`
+
+Correctness check for the benchmark. It loads your extension, attaches `data/imdb.duckdb` read-only, applies the leaderboard settings, and runs all 149 public queries, comparing each result against what vanilla DuckDB returned - the expected values were recorded with no extension loaded.
+
+### How results are asserted
+
+A query is asserted in one of three ways:
+
+**Results written out in full.** Inline values go through `CompareValues`, which for numeric columns falls back to `Value::ValuesAreEqual` -> `ApproxEqual`, a **1% relative tolerance**. Every query whose result has FLOAT/DOUBLE columns is written out in full. At `threads = 6`, parallel aggregation sums in a nondeterministic order, so `avg(...)` drifts in the last few digits between runs. Small results are written out too, so most failures come with a readable diff.
+
+**`N values hashing to <md5>`.** Used for the larger results, where writing every row would bloat the file. A hash bypasses `CompareValues`, so it is exact - which is why no query with float columns is hashed.
+
+**Row count only.** Six queries have more than one legal answer:
+
+| Query | Why |
+|---|---|
+| `q0016` | `LIMIT 10`, no `ORDER BY` - 2,078 rows qualify, 10 come back arbitrarily |
+| `q0122` | `LIMIT 30`, no `ORDER BY` - 521 rows qualify |
+| `q0123` | `ORDER BY count(*) DESC LIMIT 40` - a 40-row tie group straddles position 40; 24 are dropped arbitrarily |
+| `q0225` | `ORDER BY c DESC LIMIT 30` - a 29-row tie group straddles position 30 |
+| `q0298` | `ORDER BY cnt DESC LIMIT 20` - a 3-row tie group straddles position 20 |
+| `q0011` | `ORDER BY num_movies DESC LIMIT 20` - a 2-row tie group straddles position 20 |
+
+### Regenerating it
+
+`sql/benchmark.test` is generated. If the query set or the dataset changes:
+
+```sh
+python3 ./scripts/gen-benchmark-test.py
 ```
