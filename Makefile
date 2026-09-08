@@ -4,8 +4,6 @@ PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 EXT_NAME=waddle
 EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
-# test/sql/benchmark.test runs the public query set against the IMDB database,
-# so `make test` needs that database to exist.
 test test_debug test_reldebug: check-imdb
 
 .PHONY: check-imdb
