@@ -98,6 +98,18 @@ make test     # the SQL tests in test/sql
 debugging, submodules.
 
 
+### Benchmarking locally
+
+```sh
+make benchmark                                     # the public workload in benchmark/
+make benchmark BENCH_ARGS="--runs 3 --slowest 20"  # `--help` lists the flags
+```
+
+It prints the total and the geometric mean of each run, and simulates the
+evaluator as closely as it can: same binary, same budget, same repeats, same
+score. It does not check your answers - a fast wrong answer scores nothing.
+
+
 ### What you may and may not change
 
 **We will use DuckDB v1.5.5 to benchmark your extension, so you must build against that version.**
