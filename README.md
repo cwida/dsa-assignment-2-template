@@ -14,8 +14,6 @@ However, you have to think that this can lead to several downsides:
 - It can also affect query processing: Sometimes DuckDB might avoid full materialization in certain query phases, which might incur slowdowns if you enforce materialization.
 - There are many other intricacies with query recycling. Discovering and tackling them is part of your assignment.
 
-
-
 Currently, DuckDB is not very optimized for these repeated workloads. It is your job to change that by writing a DuckDB extension! ⚡
 [^1]: Saxena et al., [*Why TPC Is Not Enough: An Analysis of the Amazon Redshift Fleet*](https://www.vldb.org/pvldb/vol17/p3694-saxena.pdf), PVLDB 17(11), 2024.
 
@@ -93,20 +91,14 @@ duckdb data/imdb.duckdb < benchmark/q0000.sql
 `scripts/imdb_schema.sql` is the schema those queries are written against. It
 is the same schema that will be used for the leaderboard.
 
-### Building
+### Building and Testing
 
 ```sh
 make          # -> build/release/duckdb and build/release/extension/
 make test     # the SQL tests in test/sql
 ```
 
-`make test` runs `test/sql/benchmark.test`, which loads your extension and runs
-every query in `benchmark/` against `data/imdb.duckdb`, comparing each result
-against what vanilla DuckDB returns. It takes well under a minute and needs
-the dataset downloaded, so run `python3 ./scripts/download-imdb.py` first. This is
-the same correctness bar the grader applies - use it before you push.
-`test/README.md` explains what it does and does not assert, and how to
-regenerate it with `scripts/gen-benchmark-test.py` if you change `benchmark/`.
+`make test` runs `test/sql/benchmark.test`, which loads your extension and runs every query in `benchmark/` against `data/imdb.duckdb`, comparing each result against what vanilla DuckDB returns. 
 
 `docs/README.md` is the upstream extension-template documentation - CLion setup,
 debugging, submodules.
