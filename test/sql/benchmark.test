@@ -124,7 +124,8 @@ FROM
 # q0011.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 WITH mc AS
@@ -251,7 +252,8 @@ WHERE id IN (1148661,
 # q0016.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 SELECT t.title,
@@ -264,6 +266,20 @@ LIMIT 10
 ) _rows;
 ----
 10
+
+# ...so the content is pinned on the deterministic form of q0016 instead:
+#   same query with the LIMIT dropped and ORDER BY ALL added.
+query TI nosort
+SELECT * FROM (
+SELECT t.title,
+       t.production_year
+FROM cast_info ci
+JOIN title t ON t.id = ci.movie_id
+WHERE ci.person_id = 1148661
+  AND ci.role_id = 8
+) _all ORDER BY ALL;
+----
+4156 values hashing to a7d0f186423f97a684162ced355510bc
 
 # q0017.sql
 query TI rowsort
@@ -599,8 +615,8 @@ JOIN r ON r.movie_id = t.id
 LEFT JOIN b ON b.movie_id = t.id
 GROUP BY grp
 ----
-has_budget	13818	5.5276885222173995
-no_budget	120551	5.993937835438794
+has_budget	13818	5.527688522217411
+no_budget	120551	5.993937835438799
 
 # q0058.sql
 # has FLOAT/DOUBLE columns: written out in full so the runner compares
@@ -633,8 +649,8 @@ JOIN r ON r.movie_id = t.id
 LEFT JOIN b ON b.movie_id = t.id
 GROUP BY grp
 ----
-has_budget	10694	5.670011221245565	1.5967882697237192
-no_budget	37475	5.614201467645112	1.4782580595468957
+has_budget	10694	5.670011221245567	1.5967882697237172
+no_budget	37475	5.614201467645109	1.478258059546888
 
 # q0059.sql
 query IT rowsort
@@ -750,17 +766,17 @@ WHERE t.production_year BETWEEN 2001 AND 2011
 GROUP BY t.production_year
 ORDER BY t.production_year
 ----
-2001	6.167602283539481	8408
-2002	6.154609391906514	9242
-2003	6.161765595082131	9923
-2004	6.119310105737563	11538
-2005	6.104131732003929	13239
-2006	6.068476504881638	14237
-2007	6.099314277464989	13854
-2008	6.0353593061674005	14528
-2009	6.1274820979291595	15501
-2010	6.154604190189429	15942
-2011	6.138764078780926	16603
+2001	6.167602283539491	8408
+2002	6.154609391906516	9242
+2003	6.161765595082135	9923
+2004	6.119310105737562	11538
+2005	6.104131732003933	13239
+2006	6.068476504881648	14237
+2007	6.0993142774649955	13854
+2008	6.035359306167408	14528
+2009	6.127482097929161	15501
+2010	6.154604190189428	15942
+2011	6.1387640787809445	16603
 
 # q0079.sql
 query TI rowsort
@@ -952,17 +968,17 @@ WHERE t.production_year BETWEEN 2001 AND 2011
 GROUP BY t.production_year
 ORDER BY t.production_year
 ----
-2001	6.167602283539493	8408
-2002	6.154609391906521	9242
-2003	6.161765595082136	9923
-2004	6.119310105737563	11538
-2005	6.1041317320039274	13239
-2006	6.068476504881649	14237
-2007	6.099314277464997	13854
-2008	6.035359306167406	14528
-2009	6.127482097929167	15501
-2010	6.154604190189427	15942
-2011	6.138764078780941	16603
+2001	6.16760228353948	8408
+2002	6.15460939190651	9242
+2003	6.161765595082135	9923
+2004	6.119310105737559	11538
+2005	6.104131732003933	13239
+2006	6.068476504881645	14237
+2007	6.099314277464989	13854
+2008	6.035359306167409	14528
+2009	6.127482097929172	15501
+2010	6.154604190189436	15942
+2011	6.138764078780946	16603
 
 # q0088.sql
 query TI rowsort
@@ -1191,7 +1207,8 @@ WHERE it.info = 'height'
 # q0122.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 SELECT pi.info
@@ -1205,10 +1222,25 @@ LIMIT 30
 ----
 30
 
+# ...so the content is pinned on the deterministic form of q0122 instead:
+#   same query with the LIMIT dropped and ORDER BY ALL added.
+query T nosort
+SELECT * FROM (
+SELECT pi.info
+FROM person_info pi
+JOIN info_type it ON pi.info_type_id = it.id
+WHERE it.info = 'height'
+  AND pi.info NOT SIMILAR TO '[0-9]''( [0-9]+( 1/2)?")?'
+  AND pi.info NOT SIMILAR TO '[0-9]+ cm'
+) _all ORDER BY ALL;
+----
+521 values hashing to 7b0254ec4cb69456b04f18fcefa5bb0c
+
 # q0123.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 SELECT pi.info,
@@ -1224,6 +1256,23 @@ LIMIT 40
 ) _rows;
 ----
 40
+
+# ...so the content is pinned on the deterministic form of q0123 instead:
+#   same query with the LIMIT dropped and ORDER BY ALL added.
+query TI nosort
+SELECT * FROM (
+SELECT pi.info,
+       count(*)
+FROM person_info pi
+JOIN info_type it ON pi.info_type_id = it.id
+WHERE it.info='height'
+  AND pi.info NOT SIMILAR TO '[0-9]''( [0-9]+( [0-9]+/[0-9]+)?"?)?'
+  AND pi.info NOT SIMILAR TO '[0-9]+(\.[0-9]+)? cm'
+GROUP BY pi.info
+ORDER BY 2 DESC
+) _all ORDER BY ALL;
+----
+128 values hashing to 60644cc3bb4b0414cfe931eff3f33beb
 
 # q0124.sql
 query IT rowsort
@@ -1463,7 +1512,7 @@ SELECT count(*) AS n_actors,
 FROM clean c
 JOIN films f ON c.person_id = f.person_id
 ----
-126402	-0.007539216034820403	45.38027879305707	175.24752420846377
+126402	-0.007539216034819235	45.38027879305707	175.24752420846147
 
 # q0130.sql
 query IT rowsort
@@ -1553,7 +1602,7 @@ SELECT count(*) AS n_actors,
 FROM clean c
 JOIN films_movie_only f ON c.person_id = f.person_id
 ----
-101116	0.01851889021672654	10.057122512757624	4.0	803
+101116	0.018518890216725887	10.057122512757624	4.0	803
 
 # q0134.sql
 # has FLOAT/DOUBLE columns: written out in full so the runner compares
@@ -1605,8 +1654,8 @@ FROM joined
 GROUP BY gender
 ORDER BY gender
 ----
-f	38893	-0.0408371938451795	-0.022799727750827076	166.2732957087423	8.342966600673643
-m	62223	-0.01859955908191584	-0.01529831107085006	180.29986058208547	11.12856982144866
+f	38893	-0.040837193845179566	-0.02279972775082753	166.2732957087414	8.342966600673643
+m	62223	-0.018599559081916683	-0.015298311070850999	180.29986058208442	11.12856982144866
 
 # q0168.sql
 query ITII rowsort
@@ -1814,7 +1863,8 @@ Short	6
 # q0225.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 WITH wkw_movies AS
@@ -1833,6 +1883,26 @@ LIMIT 30
 ) _rows;
 ----
 30
+
+# ...so the content is pinned on the deterministic form of q0225 instead:
+#   same query with the LIMIT dropped and ORDER BY ALL added.
+query TI nosort
+SELECT * FROM (
+WITH wkw_movies AS
+  (SELECT ci.movie_id
+   FROM cast_info ci
+   WHERE ci.person_id = 1697404
+     AND ci.role_id = 8)
+SELECT k.keyword,
+       count(*) c
+FROM movie_keyword mk
+JOIN wkw_movies wm ON mk.movie_id = wm.movie_id
+JOIN keyword k ON k.id = mk.keyword_id
+GROUP BY k.keyword
+ORDER BY c DESC
+) _all ORDER BY ALL;
+----
+1302 values hashing to 9ef5b45e06f73e67020614ccb0951239
 
 # q0226.sql
 query TI rowsort
@@ -2492,12 +2562,12 @@ WHERE t.production_year BETWEEN 1998 AND 2003
 GROUP BY t.production_year
 ORDER BY t.production_year
 ----
-1998	6.046554934823091	537
-1999	5.996264855687606	589
+1998	6.046554934823088	537
+1999	5.996264855687608	589
 2000	5.892587412587409	715
 2001	6.066624203821655	785
-2002	5.9202342917997814	939
-2003	5.916684723726978	923
+2002	5.920234291799789	939
+2003	5.916684723726977	923
 
 # q0254.sql
 query TI rowsort
@@ -2697,8 +2767,8 @@ WHERE t.production_year BETWEEN 1998 AND 2003
 GROUP BY t.production_year
 ORDER BY t.production_year
 ----
-1998	6.119018404907974	163
-1999	6.150526315789473	190
+1998	6.119018404907976	163
+1999	6.150526315789475	190
 2000	5.998260869565217	230
 2001	6.222088353413655	249
 2002	6.118649517684889	311
@@ -2900,13 +2970,13 @@ WHERE t.production_year BETWEEN 1998 AND 2004
 GROUP BY t.production_year
 ORDER BY t.production_year
 ----
-1998	6.11901840490798	163
-1999	6.1505263157894765	190
-2000	5.998260869565216	230
-2001	6.2220883534136515	249
-2002	6.118649517684892	311
-2003	6.133703703703702	270
-2004	6.139432176656152	317
+1998	6.119018404907974	163
+1999	6.150526315789473	190
+2000	5.998260869565218	230
+2001	6.222088353413653	249
+2002	6.118649517684889	311
+2003	6.133703703703703	270
+2004	6.139432176656151	317
 
 # q0272.sql
 query TI rowsort
@@ -3368,7 +3438,8 @@ WHERE mc.company_id=1310
 # q0298.sql
 # More than one legal answer: LIMIT over an order that does not fully
 # determine the top rows, so *which* rows come back is not a fact about
-# this query. Proven, not sampled - see gen-benchmark-test.py. Row count only.
+# this query. Proven, not sampled - see gen-benchmark-test.py.
+# Only its cardinality can be asserted:
 query I nosort
 SELECT count(*) FROM (
 SELECT k.keyword,
@@ -3385,4 +3456,22 @@ LIMIT 20
 ) _rows;
 ----
 20
+
+# ...so the content is pinned on the deterministic form of q0298 instead:
+#   same query with the LIMIT dropped and ORDER BY ALL added.
+query TI nosort
+SELECT * FROM (
+SELECT k.keyword,
+       count(*) AS cnt
+FROM movie_companies mc
+JOIN company_type ct ON ct.id = mc.company_type_id
+JOIN movie_keyword mk ON mk.movie_id = mc.movie_id
+JOIN keyword k ON k.id = mk.keyword_id
+WHERE mc.company_id = 1310
+  AND ct.kind = 'production companies'
+GROUP BY k.keyword
+ORDER BY cnt DESC
+) _all ORDER BY ALL;
+----
+7532 values hashing to 9041f2262489f9b2137af997f874ed0c
 

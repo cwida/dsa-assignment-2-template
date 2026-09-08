@@ -17,7 +17,7 @@ A query is asserted in one of three ways:
 
 **`N values hashing to <md5>`.** Used for the larger results, where writing every row would bloat the file. A hash bypasses `CompareValues`, so it is exact - which is why no query with float columns is hashed.
 
-**Row count only.** Six queries have more than one legal answer:
+Six queries have more than one legal answer, so only their cardinality is a fact about them:
 
 | Query | Why |
 |---|---|
@@ -27,6 +27,8 @@ A query is asserted in one of three ways:
 | `q0225` | `ORDER BY c DESC LIMIT 30` - a 29-row tie group straddles position 30 |
 | `q0298` | `ORDER BY cnt DESC LIMIT 20` - a 3-row tie group straddles position 20 |
 | `q0011` | `ORDER BY num_movies DESC LIMIT 20` - a 2-row tie group straddles position 20 |
+
+Dropping the `LIMIT` + adding `ORDER BY ALL` removes the ambiguity and fixes the order. For `q0011` we use row count alone: its deterministic form is 32.9M rows (98,766,957 values).
 
 ### Regenerating it
 
