@@ -65,8 +65,10 @@ SET preserve_insertion_order = false;
 The set runs **twice**. A run scores the **geometric mean** of its query times, and the **faster run counts**.
 
 > [!WARNING]
-> **A fast wrong answer scores nothing.** Every result must match what vanilla
-> DuckDB returns.
+> **A fast wrong answer scores nothing.** Every result must match what vanilla DuckDB returns.
+
+> [!WARNING]
+> To accurately measure runtime, **we wrap queries around an `EXPLAIN ANALYZE`**. You must ensure your solution is correct in this scenario.
 
 Grading runs nightly, but **your CI is responsible for building.** The grader benchmarks the binary from your last successful CI build, so the commit it grades is the newest one you have *built* - not necessarily your latest commit. The leaderboard shows which one it used.
 
