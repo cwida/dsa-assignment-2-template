@@ -10,6 +10,12 @@
 
 require waddle
 
+# The IMDB database is 2.7GB, downloaded locally and never committed, so it
+# does not exist in CI. Without this guard the test fails there and the build
+# counts as unsuccessful -- and only successful builds are graded. Run locally
+# with:  IMDB_DATA=1 make test
+require-env IMDB_DATA
+
 statement ok
 ATTACH 'data/imdb.duckdb' AS imdb (READ_ONLY);
 

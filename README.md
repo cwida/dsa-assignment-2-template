@@ -68,40 +68,31 @@ The set runs **twice**. A run scores the **geometric mean** of its query times, 
 > **A fast wrong answer scores nothing.** Every result must match what vanilla
 > DuckDB returns.
 
-Grading runs nightly, but **your CI is responsible for building.** The grader
-benchmarks the binary from your last successful CI build, so the commit it grades is
-the newest one you have *built* - not necessarily your latest commit. The
-leaderboard shows which one it used.
+Grading runs nightly, but **your CI is responsible for building.** The grader benchmarks the binary from your last successful CI build, so the commit it grades is the newest one you have *built* - not necessarily your latest commit. The leaderboard shows which one it used.
 
-No push triggers a build by default: start a build yourself from the Actions tab on the GitHub page
-(*Run workflow*), or turn on building every push to `main` when running `assignment-setup.py`. A build
-costs about 33 of the 2000 free Actions minutes a private repository gets per
-month, so if you want to build every push, make sure your team has enough minutes.
+No push triggers a build by default: start a build yourself from the Actions tab on the GitHub page (*Run workflow*), or turn on building every push to `main` when running `assignment-setup.py`. A build costs about 33 of the 2000 free Actions minutes a private repository gets per month, so if you want to build every push, make sure your team has enough minutes.
 
 ### Download Datasets
 
-The queries in `benchmark/` run against the IMDB (JOB) dataset, which is not in
-this repository. Download it once:
+The queries in `benchmark/` run against the IMDB (JOB) dataset, which is not in this repository. Download it once:
 
 ```sh
 python3 ./scripts/download-imdb.py
 duckdb data/imdb.duckdb < benchmark/q0000.sql
 ```
 
-`scripts/imdb_schema.sql` is the schema those queries are written against. It
-is the same schema that will be used for the leaderboard.
+`scripts/imdb_schema.sql` is the schema those queries are written against. It is the same schema that will be used for the leaderboard.
 
 ### Building and Testing
 
 ```sh
 make          # -> build/release/duckdb and build/release/extension/
-make test     # the SQL tests in test/sql
+IMDB_DATA=1 make test     # the SQL tests in test/sql
 ```
 
-`make test` runs `test/sql/benchmark.test`, which loads your extension and runs every query in `benchmark/` against `data/imdb.duckdb`, comparing each result against what vanilla DuckDB returns. 
+`IMDB_DATA=1 make test` runs `test/sql/benchmark.test`, which loads your extension and runs every query in `benchmark/` against `data/imdb.duckdb`, comparing each result against what vanilla DuckDB returns. `IMDB_DATA=1` prevents the test from running in the CI (as the data is not available there) 
 
-`docs/README.md` is the upstream extension-template documentation - CLion setup,
-debugging, submodules.
+`docs/README.md` is the upstream extension-template documentation - CLion setup, debugging, submodules.
 
 
 ### What you may and may not change
@@ -109,9 +100,7 @@ debugging, submodules.
 **We will use DuckDB v1.5.5 to benchmark your extension, so you must build against that version.**
 
 DuckDB is pinned to v1.5.5 by `duckdb_version` in
-`.github/workflows/MainDistributionPipeline.yml`, which is what your CI checks the
-`duckdb/` submodule out to. An extension only loads into the version it was built
-against, so a binary built against anything else cannot be benchmarked at all.
+`.github/workflows/MainDistributionPipeline.yml`, which is what your CI checks the `duckdb/` submodule out to. An extension only loads into the version it was built against, so a binary built against anything else cannot be benchmarked at all.
 
 Please don't rename your extension, as this will (potentially) break the grader.
 
@@ -129,7 +118,6 @@ Please don't rename your extension, as this will (potentially) break the grader.
 - A DuckDB extension that **creates a new operator** `ST_Intersects` to do spatial joins: https://duckdb.org/2025/08/08/spatial-joins, https://github.com/duckdb/duckdb-spatial.
 - A DuckDB extension that does Incremental View Maintenance: https://github.com/ila/openivm. Lets you define a materialized view.
 - A DuckDB extension that **adds a new scalar function**. This repository is exactly that! It adds an operator named `waddle`.
-
 
 
 ### Troubleshooting
