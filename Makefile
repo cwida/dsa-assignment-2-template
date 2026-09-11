@@ -15,3 +15,7 @@ check-imdb:
 
 # Include the Makefile from extension-ci-tools
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
+
+.PHONY: benchmark
+benchmark:
+	python3 ./scripts/benchmark.py $(BENCH_ARGS)
