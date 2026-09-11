@@ -172,7 +172,7 @@ def team_name(default: str, registered: str, notice: bool) -> str:
 
 def team_size(default: int) -> int:
     while True:
-        answer = ask(f"Team size ({MIN_STUDENTS} or {MAX_STUDENTS})",
+        answer = ask(f"How many students are in your team? ({MIN_STUDENTS} or {MAX_STUDENTS})",
                      str(default) if default else "")
         if not answer.isdigit():
             print(f"  ! enter {MIN_STUDENTS} or {MAX_STUDENTS}")
@@ -193,7 +193,7 @@ def student_ids(size: int, earlier: list[str]) -> list[str]:
     numbers: list[str] = []
     for i in range(size):
         while True:
-            number = ask(f"Student number {i + 1}/{size}",
+            number = ask(f"Student ID of team member {i + 1} of {size}",
                          earlier[i] if i < len(earlier) else "")
             if not number:
                 print("  ! required")
@@ -311,8 +311,8 @@ def main() -> None:
     draft, notice = dict(registered), True
     while True:
         team = team_name(draft.get("team", ""), registered.get("team", ""), notice)
-        numbers = student_ids(team_size(len(draft.get("students", []))),
-                              draft.get("students", []))
+        size = team_size(len(draft.get("students", [])))
+        numbers = student_ids(size, draft.get("students", []))
 
         section("Review")
         print(f"  team        {team}")

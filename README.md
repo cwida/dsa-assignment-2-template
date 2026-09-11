@@ -132,7 +132,8 @@ Please don't rename your extension, as this will (potentially) break the grader.
 - A DuckDB extension that **creates a new operator** `ST_Intersects` to do spatial joins: https://duckdb.org/2025/08/08/spatial-joins, https://github.com/duckdb/duckdb-spatial.
 - A DuckDB extension that does Incremental View Maintenance: https://github.com/ila/openivm. Lets you define a materialized view.
 - A DuckDB extension that **adds a new scalar function**. This repository is exactly that! It adds an operator named `waddle`.
-
+- DuckDB Extension Development Workshop – Part 1: https://www.youtube.com/watch?v=Lz0E42yQjw8
+- DuckDB Extension Development Workshop – Part 2: https://www.youtube.com/watch?v=jo-G2akmjJM
 
 ### Troubleshooting
 
