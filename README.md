@@ -65,9 +65,9 @@ SET preserve_insertion_order = false;
 The set runs **twice**. A run scores the **geometric mean** of its query times, and the **faster run counts**.
 
 > [!WARNING]
-> **A wrong answer costs you three places.** Every result must match what vanilla DuckDB returns. A run that answers something incorrectly is still timed and still ranked - it is moved **three places down** the leaderboard from where its time would have put it. The leaderboard names the first query it got wrong, and hovering that shows you why it was rejected.
+> **Wrong answers rank before speed.** Every result must match what vanilla DuckDB returns. A run that answers something incorrectly is still timed and still shown on the leaderboard, but the board is sorted by **wrong answers first and time second**: every team that answered the whole set stands above every team that did not, and among those that got something wrong, fewer wrong stands higher.
 >
-> The penalty is places, not seconds, so it cannot be outrun: no matter how fast a wrong run is, three teams that answered everything correctly finish above it. And if you have an earlier run that answered everything, that run is the one you are ranked on - a wrong one never replaces it.
+> So no amount of speed buys correctness back - one wrong answer puts you below the slowest team that got them all right. The leaderboard shows how many you got wrong and names the first of them; hovering that tells you why it was rejected. If you have an earlier run that answered everything, that run is the one you are ranked on.
 
 > [!WARNING]
 > To accurately measure runtime, **we wrap queries around an `EXPLAIN ANALYZE`**. You must ensure your solution is correct in this scenario.
@@ -108,8 +108,8 @@ make benchmark BENCH_ARGS="--runs 3 --slowest 20"  # `--help` lists the flags
 
 It prints the total and the geometric mean of each run, and simulates the
 evaluator as closely as it can: same binary, same budget, same repeats, same
-score. It does not check your answers, and a wrong one costs three places on the
-leaderboard - `IMDB_DATA=1 make test` is what checks them.
+score. It does not check your answers, and one wrong answer ranks you below
+every team that has none - `IMDB_DATA=1 make test` is what checks them.
 
 
 ### What you may and may not change
