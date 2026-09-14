@@ -21,9 +21,7 @@ from pathlib import Path
 APP_URL = "https://github.com/apps/dsa-evaluator-assignment-2"
 INSTALL_URL = f"{APP_URL}/installations/new"
 TEAM_FILE = "team.json"
-SCHEMA = 1
-MIN_STUDENTS = 2
-MAX_STUDENTS = 3
+SCHEMA = 2
 TEMPLATE_REMOTES = {"cwida/dsa-assignment-2-template"}
 
 WORKFLOW = Path(".github/workflows/MainDistributionPipeline.yml")
@@ -170,45 +168,21 @@ def team_name(default: str, registered: str, notice: bool) -> str:
             return name
 
 
-def team_size(default: int) -> int:
+def canvas_group(default: str) -> str:
+    """The group number is the whole roster: Canvas already knows who is in it,
+    so the team's student numbers are never asked for."""
     while True:
-        answer = ask(f"How many students are in your team? ({MIN_STUDENTS} or {MAX_STUDENTS})",
-                     str(default) if default else "")
-        if not answer.isdigit():
-            print(f"  ! enter {MIN_STUDENTS} or {MAX_STUDENTS}")
-            continue
-        size = int(answer)
-        if size < MIN_STUDENTS:
-            print(f"  ! a team of {size} is not allowed, this is a group assignment")
-        elif size > MAX_STUDENTS:
-            print(f"  ! at most {MAX_STUDENTS} students per team")
-        elif size < MAX_STUDENTS and not confirm(
-                f"  ! teams of {MAX_STUDENTS} are preferred. Continue with {size}?"):
-            continue
-        else:
-            return size
+        number = ask("Your group number in Canvas", default)
+        if number.isdigit():
+            return number
+        print("  ! enter the number of the group you signed up to in Canvas")
 
 
-def student_ids(size: int, earlier: list[str]) -> list[str]:
-    numbers: list[str] = []
-    for i in range(size):
-        while True:
-            number = ask(f"Student ID of team member {i + 1} of {size}",
-                         earlier[i] if i < len(earlier) else "")
-            if not number:
-                print("  ! required")
-            elif number in numbers:
-                print(f"  ! {number} is already in this team")
-            else:
-                numbers.append(number)
-                break
-    return numbers
-
-
-def write(root: Path, previous: dict, slug: str, team: str, numbers: list[str]) -> Path:
+def write(root: Path, previous: dict, slug: str, team: str, group: str) -> Path:
     """Keep the original timestamp when nothing else changed, so a re-run is a
     no-op rather than a fresh commit."""
-    payload = {"schema": SCHEMA, "team": team, "students": numbers, "repository": slug,
+    payload = {"schema": SCHEMA, "team": team, "canvas_group": group,
+               "repository": slug,
                "registered_at": datetime.now(timezone.utc)
                                         .isoformat(timespec="seconds")
                                         .replace("+00:00", "Z")}
@@ -311,12 +285,11 @@ def main() -> None:
     draft, notice = dict(registered), True
     while True:
         team = team_name(draft.get("team", ""), registered.get("team", ""), notice)
-        size = team_size(len(draft.get("students", [])))
-        numbers = student_ids(size, draft.get("students", []))
+        group = canvas_group(draft.get("canvas_group", ""))
 
         section("Review")
         print(f"  team        {team}")
-        print(f"  students    {', '.join(numbers)}")
+        print(f"  canvas      group {group}")
         print(f"  repository  {slug}")
         action = choose(f"\nCommit and push {TEAM_FILE}?",
                         "push", "restart", "cancel", default="push")
@@ -324,14 +297,14 @@ def main() -> None:
             raise SystemExit("cancelled, nothing written")
         if action == "push":
             break
-        draft, notice = {**draft, "team": team, "students": numbers}, False
+        draft, notice = {**draft, "team": team, "canvas_group": group}, False
         section("Team")
 
     section("Being graded")
     auto = build_policy(slug)
 
     section("Committing")
-    changed = [write(root, registered, slug, team, numbers)]
+    changed = [write(root, registered, slug, team, group)]
     for edited in (set_autobuild(root, auto),):
         if edited and edited not in changed:
             changed.append(edited)
@@ -345,7 +318,7 @@ def main() -> None:
     offer_dataset(root)
 
     section("Done")
-    print(f"  {team}: {', '.join(numbers)} -> {slug}")
+    print(f"  {team}: Canvas group {group} -> {slug}")
     print(f"  builds {'on every push to main' if auto else 'only when you run them'}"
           f", graded nightly")
 
