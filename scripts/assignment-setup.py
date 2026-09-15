@@ -211,8 +211,7 @@ def publish(paths: list[Path], team: str) -> None:
 
 def build_policy(slug: str) -> bool:
     """A build is the submission, so this asks when one should happen."""
-    print("  The grader benchmarks the binary your CI builds, never your source,")
-    print("  and it grades the newest commit you have built.")
+    print("  The grader uses the binary GitHub Actions build and will be grading the latest finished build.")
     print(f"  A build costs ~{BUILD_MINUTES} of the {FREE_MINUTES} free Actions "
           f"minutes a private repo")
     print(f"  gets monthly. Nothing builds on its own unless you say so here.")
